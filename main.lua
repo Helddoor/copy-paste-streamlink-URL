@@ -1,10 +1,47 @@
-trim(s)
+local utils = require 'mp.utils'
+
+mp.msg.info("COPY-PASTE-STREAMLINK-URL LOADED")
+
+function trim(s)
    return (s:gsub("^%s*(%S+)%s*", "%1"))
+end
+
+function streamlink(url)
+   local pid = utils.getpid()
+   local port = 8000 + (pid % 1000) 
+   local addr = "http://127.0.0.1:" .. port
+   
+   mp.osd_message("Streamlink: Initializing Engine...")
+   
+   mp.command_native_async({
+      name = "subprocess",
+      args = { 
+         "streamlink", 
+         "--player-external-http", 
+         "--player-external-http-port", tostring(port), 
+         url, 
+         "best",
+         "--retry-streams", "5",
+         "--retry-open", "5"
+      },
+      playback_only = false,
+      capture_stdout = false,
+      capture_stderr = false
+   })
+
+   -- 2. Give Streamlink a moment to initialize the server (1.5 seconds) then tell mpv to pull the data from that local server.
+   mp.add_timeout(1.5, function()
+      mp.osd_message("Streamlink: Connecting...")
+      mp.commandv("loadfile", addr, "replace")
+      mp.set_property("file-local-options/force-media-title", "Streamlink: " .. url)
+      -- Resume playback if paused
+      mp.set_property_bool("pause", false)
+   end)
 end
 
 function openURL()
    
-   subprocess = {
+   local subprocess = {
       name = "subprocess",
       args = { "powershell", "-Command", "Get-Clipboard", "-Raw" },
       playback_only = false,
@@ -14,40 +51,26 @@ function openURL()
    
    mp.osd_message("Getting URL from clipboard...")
    
-   r = mp.command_native(subprocess)
+   local r = mp.command_native(subprocess)
    
    --failed getting clipboard data for some reason
-   if r.status < 0 then
+   if r.status < 0 or not r.stdout then
       mp.osd_message("Failed getting clipboard data!")
       print("Error(string): "..r.error_string)
       print("Error(stderr): "..r.stderr)
-   end
-   
-   url = r.stdout
-   
-   if not url then
       return
    end
    
-   --trim whitespace from string
-   url=trim(url)
-
-   if not url then
-      mp.osd_message("clipboard empty")
+   local url = trim(r.stdout)
+   if not url or url == "" then
+      mp.osd_message("Clipboard empty")
       return
    end
-   
-   --immediately resume playback after loading URL
-   if mp.get_property_bool("core-idle") then
-      if not mp.get_property_bool("idle-active") then
-         mp.command("keypress space")
-      end
-   end
+	
+   --technically the old way (but mpv should support this now natively)
+   --mp.commandv("loadfile", url, "replace")
+   streamlink(url)
 
-   --try opening url
-   --will fail if url is not valid
-   mp.osd_message("Try Opening URL:\n"..url)
-   mp.commandv("loadfile", url, "replace")
 end
 
 mp.add_key_binding("ctrl+v", openURL)
