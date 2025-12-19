@@ -34,8 +34,8 @@ function streamlink(url)
       mp.osd_message("Streamlink: Connecting...")
       mp.commandv("loadfile", addr, "replace")
       mp.set_property("file-local-options/force-media-title", "Streamlink: " .. url)
-      -- Resume playback if paused
-      mp.set_property_bool("pause", false)
+      -- prevents AUTO-PLAY:
+      mp.set_property_bool("pause", true)
    end)
 end
 
@@ -53,7 +53,7 @@ function openURL()
    
    local r = mp.command_native(subprocess)
    
-   --failed getting clipboard data for some reason
+   -- Failed getting clipboard data for some reason
    if r.status < 0 or not r.stdout then
       mp.osd_message("Failed getting clipboard data!")
       print("Error(string): "..r.error_string)
@@ -67,8 +67,8 @@ function openURL()
       return
    end
 	
-   --technically the old way (but mpv should support this now natively)
-   --mp.commandv("loadfile", url, "replace")
+   -- Technically the old way (but mpv should support this now natively)
+   -- mp.commandv("loadfile", url, "replace")
    streamlink(url)
 
 end
