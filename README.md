@@ -5,3 +5,26 @@ Before was it not possible to copy paste links into mpv that feature was seeming
 ## Requirements
 
 Besides mpv, have streamlink installed
+
+## Config streamlink config
+
+If the following folder/files do not exist then create them.
+
+location:  
+%APPDATA%\streamlink\config
+
+example config:
+
+```
+# Use mpv as the default player
+player=mpv
+
+# Always pick the best quality
+default-stream=best
+
+#Allows to download multiple segements at once
+stream-segment-threads=10
+
+# Pass these stability arguments to mpv every time (technically should use mpv configs)
+player-args=--cache=yes --demuxer-max-bytes=500MiB
+```
