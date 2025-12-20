@@ -1,12 +1,34 @@
 local utils = require 'mp.utils'
 
 mp.msg.info("COPY-PASTE-STREAMLINK-URL LOADED")
+mp.add_hook("on_load", 50, function()
+   local url = mp.get_property("user-data/next-url")
+   local forced_title = mp.get_property("user-data/forced-title")
+  
+   -- Second call clears it so it doesn't affect the next video
+   if url and url ~= "" then
+      url = url:gsub('"', ''):gsub("'", "")
+      mp.set_property("user-data/real-url", url)
+      mp.set_property("user-data/next-url", "")
+   end
+
+   if forced_title and forced_title ~= "" then
+        forced_title = forced_title:gsub('"', ''):gsub("'", "")
+        mp.set_property("file-local-options/force-media-title", forced_title)
+        mp.set_property("user-data/forced-title", "")
+    end
+end)
 
 function trim(s)
    return (s:gsub("^%s*(%S+)%s*", "%1"))
 end
 
 function streamlink(url)
+   local filename = url:match("([^/]+)$") or "stream" -- Extract filename from URL (gets everything after the last /)
+   filename = filename:gsub("%?.*", "")    -- Remove query parameters (everything after ?)
+   local clean_title = filename:gsub("[^%w%.]", "_")    -- Sanitize: replace non-alphanumeric chars (except . ) with underscores
+
+
    local pid = utils.getpid()
    local port = 8000 + (pid % 1000) 
    local addr = "http://127.0.0.1:" .. port
@@ -32,8 +54,10 @@ function streamlink(url)
    -- 2. Give Streamlink a moment to initialize the server (1.5 seconds) then tell mpv to pull the data from that local server.
    mp.add_timeout(1.5, function()
       mp.osd_message("Streamlink: Connecting...")
+      -- Store metadata in user-data so the hook can pick it up
+      mp.set_property("user-data/real-url", url)
+      mp.set_property("user-data/forced-title", clean_title)
       mp.commandv("loadfile", addr, "replace")
-      mp.set_property("file-local-options/force-media-title", "Streamlink: " .. url)
       -- prevents AUTO-PLAY:
       mp.set_property_bool("pause", true)
    end)
