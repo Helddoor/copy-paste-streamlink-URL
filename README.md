@@ -23,7 +23,8 @@ player=mpv
 default-stream=best
 
 #Allows to download multiple segements at once
-stream-segment-threads=10
+stream-segment-threads=6
+#stream-segment-threads=10 # might be a bit too much
 
 # Pass these stability arguments to mpv every time (technically should use mpv configs)
 player-args=--cache=yes --demuxer-max-bytes=500MiB

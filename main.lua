@@ -1,6 +1,10 @@
 local utils = require 'mp.utils'
+local streamlink_proc = nil
+
+
 
 mp.msg.info("COPY-PASTE-STREAMLINK-URL LOADED")
+
 mp.add_hook("on_load", 50, function()
    local url = mp.get_property("user-data/next-url")
    local forced_title = mp.get_property("user-data/forced-title")
@@ -19,11 +23,20 @@ mp.add_hook("on_load", 50, function()
     end
 end)
 
+function kill_previous_stream()
+    if streamlink_proc then
+        mp.abort_async_command(streamlink_proc)
+        streamlink_proc = nil
+    end
+end
+
 function trim(s)
    return (s:gsub("^%s*(%S+)%s*", "%1"))
 end
 
 function streamlink(url)
+   kill_previous_stream()
+
    local filename = url:match("([^/]+)$") or "stream" -- Extract filename from URL (gets everything after the last /)
    filename = filename:gsub("%?.*", "")    -- Remove query parameters (everything after ?)
    local clean_title = filename:gsub("[^%w%.]", "_")    -- Sanitize: replace non-alphanumeric chars (except . ) with underscores
@@ -35,7 +48,7 @@ function streamlink(url)
    
    mp.osd_message("Streamlink: Initializing Engine...")
    
-   mp.command_native_async({
+   streamlink_proc = mp.command_native_async({
       name = "subprocess",
       args = { 
          "streamlink", 
@@ -98,3 +111,4 @@ function openURL()
 end
 
 mp.add_key_binding("ctrl+v", openURL)
+mp.register_event("shutdown", kill_previous_stream)
