@@ -12,7 +12,6 @@ mp.add_hook("on_load", 50, function()
    -- Second call clears it so it doesn't affect the next video
    if url and url ~= "" then
       url = url:gsub('"', ''):gsub("'", "")
-      mp.set_property("user-data/real-url", url)
       mp.set_property("user-data/next-url", "")
    end
 
@@ -36,11 +35,6 @@ end
 
 function streamlink(url)
    kill_previous_stream()
-
-   local filename = url:match("([^/]+)$") or "stream" -- Extract filename from URL (gets everything after the last /)
-   filename = filename:gsub("%?.*", "")    -- Remove query parameters (everything after ?)
-   local clean_title = filename:gsub("[^%w%.]", "_")    -- Sanitize: replace non-alphanumeric chars (except . ) with underscores
-
 
    local pid = utils.getpid()
    local port = 8000 + (pid % 1000) 
@@ -68,8 +62,7 @@ function streamlink(url)
    mp.add_timeout(1.5, function()
       mp.osd_message("Streamlink: Connecting...")
       -- Store metadata in user-data so the hook can pick it up
-      mp.set_property("user-data/real-url", url)
-      mp.set_property("user-data/forced-title", clean_title)
+      mp.set_property("user-data/forced-title", url)
       mp.commandv("loadfile", addr, "replace")
       -- prevents AUTO-PLAY:
       mp.set_property_bool("pause", true)
@@ -110,5 +103,5 @@ function openURL()
 
 end
 
-mp.add_key_binding("ctrl+v", openURL)
+mp.add_key_binding("ctrl+s", openURL)
 mp.register_event("shutdown", kill_previous_stream)
